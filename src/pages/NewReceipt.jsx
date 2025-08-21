@@ -1,60 +1,67 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, collection, addDoc } from "firebase/firestore";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
 export default function NewReceipt() {
-  const [columns, setColumns] = useState(["Serial No", "Product", "Price", "Qty"]);
+  const [columns, setColumns] = useState([]);
   const [rows, setRows] = useState([{ }]);
 
   useEffect(() => {
-    const fetchColumns = async () => {
-      const snapshot = await getDocs(collection(db, "receiptFormat"));
-      snapshot.forEach(doc => setColumns(doc.data().columns));
-    };
-    fetchColumns();
+    const formatRef = doc(db, "settings", "receiptFormat");
+    const unsub = onSnapshot(formatRef, (snap) => {
+      if (snap.exists()) setColumns(snap.data().columns);
+    });
+    return () => unsub();
   }, []);
 
-  const handleChange = (index, col, value) => {
-    const updated = [...rows];
-    updated[index][col] = value;
-    setRows(updated);
+  const updateCell = (rowIdx, col, value) => {
+    const newRows = [...rows];
+    newRows[rowIdx][col] = value;
+    setRows(newRows);
   };
 
   const addRow = () => setRows([...rows, {}]);
 
-  const generatePDF = async () => {
-    const doc = new jsPDF();
-    const tableData = rows.map(r => columns.map(c => r[c] || ""));
-    doc.autoTable({ head: [columns], body: tableData });
-    doc.save("receipt.pdf");
-    await addDoc(collection(db, "receipts"), { rows, date: new Date() });
+  const saveReceipt = async () => {
+    await addDoc(collection(db, "receipts"), { rows, createdAt: new Date() });
+    generatePDF();
+  };
+
+  const generatePDF = () => {
+    const docu = new jsPDF();
+    docu.text("Receipt", 14, 16);
+    const tableData = rows.map((r) => columns.map((c) => r[c] || ""));
+    docu.autoTable({ head: [columns], body: tableData });
+    docu.save("receipt.pdf");
   };
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Generate New Receipt</h2>
-      <table className="border mb-4 w-full">
+      <h2 className="text-xl font-bold mb-4">New Receipt</h2>
+      <table className="w-full border">
         <thead>
-          <tr>
-            {columns.map(c => <th key={c} className="border px-2">{c}</th>)}
-          </tr>
+          <tr>{columns.map((c, i) => <th key={i} className="border p-2">{c}</th>)}</tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {columns.map(c => (
-                <td key={c} className="border">
-                  <input type="text" value={row[c] || ""} onChange={e => handleChange(i, c, e.target.value)} className="w-full p-1"/>
+          {rows.map((r, rowIdx) => (
+            <tr key={rowIdx}>
+              {columns.map((c, colIdx) => (
+                <td key={colIdx} className="border p-2">
+                  <input className="w-full"
+                    value={r[c] || ""}
+                    onChange={(e) => updateCell(rowIdx, c, e.target.value)} />
                 </td>
               ))}
             </tr>
           ))}
         </tbody>
       </table>
-      <button onClick={addRow} className="bg-green-500 text-white px-3 py-1 rounded mr-2">+ Add Row</button>
-      <button onClick={generatePDF} className="bg-blue-500 text-white px-3 py-1 rounded">Generate PDF</button>
+      <div className="mt-4 space-x-2">
+        <button onClick={addRow} className="bg-gray-500 text-white px-4 py-2 rounded">Add Row</button>
+        <button onClick={saveReceipt} className="bg-green-600 text-white px-4 py-2 rounded">Save & Download PDF</button>
+      </div>
     </div>
   );
 }

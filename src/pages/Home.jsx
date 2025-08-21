@@ -1,17 +1,19 @@
 import { Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
+import { auth } from "../firebase";
+import { signOut } from "firebase/auth";
 
 export default function Home() {
   return (
-    <div>
-      <Navbar />
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold mb-6">Welcome to EasySlip</h2>
-        <div className="flex flex-col gap-4">
-          <Link to="/new" className="bg-blue-500 text-white px-4 py-2 rounded">Generate New Receipt</Link>
-          <Link to="/records" className="bg-green-500 text-white px-4 py-2 rounded">Previous Records</Link>
-          <Link to="/update" className="bg-purple-500 text-white px-4 py-2 rounded">Update Receipt Format</Link>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <nav className="flex justify-between items-center p-4 bg-blue-700 text-white">
+        <h1 className="text-xl font-bold">Receiptify</h1>
+        <button onClick={() => signOut(auth)} className="bg-red-500 px-4 py-1 rounded">Logout</button>
+      </nav>
+
+      <div className="flex flex-col items-center mt-10 space-y-4">
+        <Link to="/new" className="px-4 py-2 bg-green-600 text-white rounded shadow">Generate New Receipt</Link>
+        <Link to="/records" className="px-4 py-2 bg-blue-600 text-white rounded shadow">View Previous Records</Link>
+        <Link to="/format" className="px-4 py-2 bg-purple-600 text-white rounded shadow">Update Receipt Format</Link>
       </div>
     </div>
   );
